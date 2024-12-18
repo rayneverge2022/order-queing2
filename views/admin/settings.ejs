@@ -1,0 +1,168 @@
+<%- include('layout', {
+    title: 'Settings',
+    path: '/admin/settings',
+    style: `
+        <style>
+            .settings-card {
+                margin-bottom: 1.5rem;
+            }
+            .form-switch {
+                padding-left: 2.5em;
+            }
+            .save-feedback {
+                display: none;
+                margin-left: 1rem;
+            }
+        </style>
+    `,
+    body: `
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <!-- Notification Settings -->
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Notification Settings</h5>
+                        <form id="notificationForm">
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="emailNotifications">
+                                <label class="form-check-label" for="emailNotifications">Email Notifications</label>
+                            </div>
+                            <div class="mb-3">
+                                <label for="emailAddress" class="form-label">Email Address</label>
+                                <input type="email" class="form-control" id="emailAddress">
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Display Settings -->
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Display Settings</h5>
+                        <form id="displayForm">
+                            <div class="mb-3">
+                                <label for="ordersPerPage" class="form-label">Orders per Page</label>
+                                <select class="form-select" id="ordersPerPage">
+                                    <option value="5">5</option>
+                                    <option value="10">10</option>
+                                    <option value="20">20</option>
+                                    <option value="50">50</option>
+                                </select>
+                            </div>
+                            <div class="mb-3 form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="darkMode">
+                                <label class="form-check-label" for="darkMode">Dark Mode</label>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Auto-refresh Settings -->
+                <div class="card settings-card">
+                    <div class="card-body">
+                        <h5 class="card-title">Auto-refresh Settings</h5>
+                        <form id="refreshForm">
+                            <div class="mb-3">
+                                <label for="refreshInterval" class="form-label">Refresh Interval (seconds)</label>
+                                <select class="form-select" id="refreshInterval">
+                                    <option value="0">Disabled</option>
+                                    <option value="5">5 seconds</option>
+                                    <option value="10">10 seconds</option>
+                                    <option value="30">30 seconds</option>
+                                    <option value="60">1 minute</option>
+                                </select>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Save Button -->
+                <div class="text-end d-flex align-items-center justify-content-end">
+                    <span id="saveFeedback" class="text-success save-feedback">
+                        <i class="fas fa-check"></i> Settings saved successfully!
+                    </span>
+                    <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                </div>
+            </div>
+        </div>
+    `,
+    script: `
+        <script>
+            // Load settings when page loads
+            document.addEventListener('DOMContentLoaded', () => {
+                loadSettings();
+            });
+
+            async function loadSettings() {
+                try {
+                    const response = await fetch('/api/settings');
+                    if (!response.ok) {
+                        throw new Error('Failed to load settings');
+                    }
+                    
+                    const settings = await response.json();
+                    
+                    // Apply settings to form
+                    document.getElementById('emailNotifications').checked = settings.email_notifications || false;
+                    document.getElementById('emailAddress').value = settings.email_address || '';
+                    document.getElementById('ordersPerPage').value = settings.orders_per_page || '5';
+                    document.getElementById('darkMode').checked = settings.dark_mode || false;
+                    document.getElementById('refreshInterval').value = settings.refresh_interval || '0';
+                    
+                    // Apply dark mode if enabled
+                    if (settings.dark_mode) {
+                        document.body.classList.add('dark-mode');
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                    }
+                } catch (error) {
+                    console.error('Error loading settings:', error);
+                }
+            }
+
+            async function saveSettings() {
+                const settings = {
+                    email_notifications: document.getElementById('emailNotifications').checked,
+                    email_address: document.getElementById('emailAddress').value,
+                    orders_per_page: document.getElementById('ordersPerPage').value,
+                    dark_mode: document.getElementById('darkMode').checked,
+                    refresh_interval: document.getElementById('refreshInterval').value
+                };
+
+                try {
+                    const response = await fetch('/api/settings', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(settings)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error('Failed to save settings');
+                    }
+
+                    // Show success message
+                    const feedback = document.getElementById('saveFeedback');
+                    feedback.style.display = 'inline';
+                    setTimeout(() => {
+                        feedback.style.display = 'none';
+                    }, 3000);
+
+                    // Apply dark mode immediately
+                    if (settings.dark_mode) {
+                        document.body.classList.add('dark-mode');
+                    } else {
+                        document.body.classList.remove('dark-mode');
+                    }
+
+                    // Broadcast settings change event
+                    window.dispatchEvent(new CustomEvent('settingsChanged', { detail: settings }));
+                } catch (error) {
+                    console.error('Error saving settings:', error);
+                    alert('Failed to save settings. Please try again.');
+                }
+            }
+        </script>
+    `
+}) %>
